@@ -1,4 +1,4 @@
-package com.example.rachascompose
+package com.example.rachascompose.ui.screen
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -19,9 +19,9 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        contadores.add(Counter("Nombre",78))
-        contadores.add(Counter("Nombre2",7))
-        contadores.add(Counter("Nombre3",478))
+        contadores.add(Counter("Nombre","https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/shiny/132.png",78))
+        contadores.add(Counter("Nombre2","https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/shiny/132.png",7))
+        contadores.add(Counter("Nombre3","https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/shiny/132.png",478))
 
         setContent {
             RachasComposeTheme {
@@ -41,7 +41,7 @@ fun CardList(){
     ) {
         LazyColumn(){
             items(contadores){
-                contador->
+                contador ->
                 CardLayout.CounterCard(contador)
             }
         }
@@ -52,5 +52,6 @@ fun CardList(){
 @Composable
 fun DefaultPreview() {
     RachasComposeTheme {
+        CardList()
     }
 }

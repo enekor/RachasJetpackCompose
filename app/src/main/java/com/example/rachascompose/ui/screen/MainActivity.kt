@@ -1,6 +1,9 @@
 package com.example.rachascompose.ui.screen
 
+import android.content.Context
 import android.os.Bundle
+import android.util.Log
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.AnimatedVisibility
@@ -13,26 +16,26 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.DialogProperties
+import androidx.room.Room
 import coil.compose.rememberAsyncImagePainter
+import com.example.rachascompose.baseDeDatos.BaseDeDatos
 import com.example.rachascompose.model.Counter
 import com.example.rachascompose.ui.theme.RachasComposeTheme
-
-var contadores = mutableListOf<Counter>()
 
 class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        contadores.add(Counter("Nombre","https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/shiny/132.png",78))
-        contadores.add(Counter("Nombre2","https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/shiny/132.png",7))
-        contadores.add(Counter("Nombre3","https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/shiny/132.png",478))
 
         setContent {
             RachasComposeTheme {
@@ -42,15 +45,20 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun MainScreen(){
 
-    var openDialog by remember { mutableStateOf(false)}
-    var nombre by remember { mutableStateOf("")}
-    var imagen by remember { mutableStateOf("https://upload.wikimedia.org/wikipedia/commons/thumb/7/7e/Vector_search_icon.svg/1200px-Vector_search_icon.svg.png") }
-    var clicked by remember { mutableStateOf(false)}
-    var buscarNombre by remember { mutableStateOf("")}
+    val buscarImagenDefecto = "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7e/Vector_search_icon.svg/1200px-Vector_search_icon.svg.png"
+    val contexto = LocalContext.current
+
+    var openDialog by remember { mutableStateOf(false) }
+    var nombre by remember { mutableStateOf("") }
+    var imagen by remember { mutableStateOf(buscarImagenDefecto) }
+    var clicked by remember { mutableStateOf(false) }
+    var buscarNombre by remember { mutableStateOf("") }
     var previewing by remember { mutableStateOf(false) }
+    var listaCounter by remember { mutableStateOf(loadListFromDataBase(contexto)) }
 
     Scaffold(
         Modifier.fillMaxSize(),
@@ -65,21 +73,23 @@ fun MainScreen(){
         },
         floatingActionButtonPosition = FabPosition.End
     ){
-        CardList()
+        CardList(listaCounter)
         AnimatedVisibility(visible = openDialog) {
 
-            var lista = listOf<String>()
+            var listaImagenes = listOf<String>()
 
             AlertDialog(
+                properties = DialogProperties(usePlatformDefaultWidth = false),
                 modifier = Modifier
-                    .padding(horizontal = 10.dp,vertical = 20.dp)
-                    .fillMaxSize()
+                    .padding(horizontal = 10.dp, vertical = 20.dp)
+                    .wrapContentHeight()
                     .background(Color.Transparent),
                 onDismissRequest = { openDialog = false },
                 text = {
                     Column(
                         verticalArrangement = Arrangement.Center,
-                        horizontalAlignment = Alignment.CenterHorizontally
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.wrapContentHeight()
                     ) {
                         OutlinedTextField(
                             value = nombre,
@@ -90,15 +100,19 @@ fun MainScreen(){
                         Image(
                             painter = rememberAsyncImagePainter(model = imagen),
                             contentDescription = "imagen",
-                            modifier = Modifier.clickable {
-                                clicked = !clicked
-                                previewing = false
-                            }.size(200.dp).padding(horizontal = 12.dp)
+                            modifier = Modifier
+                                .clickable {
+                                    clicked = !clicked
+                                    previewing = false
+                                }
+                                .size(200.dp)
+                                .padding(horizontal = 12.dp)
                         )
                         AnimatedVisibility(visible = clicked) {
                             Column(
                                 horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.Center
+                                verticalArrangement = Arrangement.Center,
+                                modifier = Modifier.wrapContentHeight()
                             ) {
                                 Text(text = "Buscar")
                                 OutlinedTextField(
@@ -109,8 +123,22 @@ fun MainScreen(){
                                 )
                                 Button(
                                     onClick = {
-                                        lista = AddNewCounterItem.buscarImagen()
-                                        previewing = !previewing
+                                        if(buscarNombre == ""){
+                                            toaster("Introduzca algo en el cuadro de texto antes de buscar",contexto)
+                                        }else{
+                                            Log.i("api","Buscando")
+                                            toaster("Buscando...",contexto)
+                                            listaImagenes = AddNewCounterItem.buscarImagen(buscarNombre,contexto)
+
+                                            if(!listaImagenes.isEmpty()) {
+                                                previewing = !previewing
+                                                Log.i("api", "avemus resultado")
+                                                toaster("Listo!", contexto)
+                                            }else{
+                                                Log.i("api","No se encontro resultado")
+                                                toaster("No se han encontrado resultados", contexto)
+                                            }
+                                        }
                                     }
                                 ) {
                                     Text(text = "Preview")
@@ -119,17 +147,18 @@ fun MainScreen(){
                                     visible = previewing) {
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.Center
+                                        horizontalArrangement = Arrangement.Center,
+                                        modifier = Modifier.wrapContentHeight()
                                     ) {
                                         Image(
                                             modifier = Modifier
                                                 .size(120.dp)
                                                 .padding(horizontal = 5.dp)
                                                 .clickable {
-                                                    imagen = lista[0]
+                                                    imagen = listaImagenes[0]
                                                     previewing = false
-                                                    },
-                                            painter = rememberAsyncImagePainter(model = lista[0]),
+                                                },
+                                            painter = rememberAsyncImagePainter(model = listaImagenes[0]),
                                             contentDescription = "Forma original")
 
                                         Image(
@@ -137,10 +166,10 @@ fun MainScreen(){
                                                 .size(120.dp)
                                                 .padding(horizontal = 5.dp)
                                                 .clickable {
-                                                    imagen = lista[1]
+                                                    imagen = listaImagenes[1]
                                                     previewing = false
-                                                    },
-                                            painter = rememberAsyncImagePainter(model = lista[1]),
+                                                },
+                                            painter = rememberAsyncImagePainter(model = listaImagenes[1]),
                                             contentDescription = "Forma shiny"
                                         )
                                     }
@@ -155,7 +184,15 @@ fun MainScreen(){
                     ){
                         Button(
                             modifier = Modifier.fillMaxWidth(),
-                            onClick = { openDialog = false }
+                            onClick = {
+                                if(imagen != buscarImagenDefecto && nombre != ""){
+                                    createNewCounter(Counter(nombre,imagen,0),contexto)
+                                    listaCounter = loadListFromDataBase(contexto)
+                                    openDialog = false
+                                }else{
+                                    toaster("No se pueden dejar campos en blanco",contexto)
+                                }
+                            }
                         ) {
                             Text(text = "Guardar")
                         }
@@ -166,25 +203,81 @@ fun MainScreen(){
     }
 }
 
+@OptIn(ExperimentalMaterialApi::class)
 @Composable
-fun CardList(){
+fun CardList(contadores:List<Counter>){
+
+    val contexto = LocalContext.current
+
     Surface(
-        color = Color.LightGray,
         modifier = Modifier.fillMaxWidth()
     ) {
         LazyColumn(){
             items(contadores){
                 contador ->
-                CardLayout.CounterCard(contador)
+                val state = rememberDismissState(
+                    confirmStateChange = {
+                        if(it == DismissValue.DismissedToStart){
+                            deleteCounter(contador,contexto)
+                        }
+                        true
+                    }
+                )
+
+                SwipeToDismiss(
+                    state = state,
+                    background = {
+
+                        var color = when(state.dismissDirection){
+                            DismissDirection.EndToStart -> Color.Red
+                            null -> Color.Transparent
+                            else -> Color.Transparent
+                        }
+                        Box(
+                            modifier = Modifier.background(color = color).fillMaxSize().padding(12.dp)
+                        ){
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = "Borrar",
+                                tint = Color.Gray,
+                                modifier = Modifier.align(Alignment.CenterEnd))
+                        }
+                    },
+                    dismissContent = {
+                        CardLayout.CounterCard(contador)
+                    },
+                    directions = setOf(DismissDirection.EndToStart)
+                )
+
             }
         }
     }
+}
+
+private fun toaster(texto:String, contexto:Context){
+    Toast.makeText(contexto,texto,Toast.LENGTH_SHORT)
+}
+
+private fun createNewCounter(counter:Counter, contexto: Context){
+    val db = Room.databaseBuilder(contexto,BaseDeDatos::class.java,"contadores").allowMainThreadQueries().build()
+    db.itemDao().insertarContador(counter)
+    toaster("Guardado con exito",contexto)
+}
+
+private fun loadListFromDataBase(contexto:Context):List<Counter>{
+    val baseDeDatos = Room.databaseBuilder(contexto,BaseDeDatos::class.java,"contadores").allowMainThreadQueries().build()
+    return baseDeDatos.itemDao().getAllCounters()
+}
+
+private fun deleteCounter(contador:Counter, contexto: Context){
+    val baseDeDatos = Room.databaseBuilder(contexto,BaseDeDatos::class.java,"contadores").allowMainThreadQueries().build()
+    baseDeDatos.itemDao().deleteCounter(contador)
 }
 
 @Preview(showBackground = true)
 @Composable
 fun DefaultPreview() {
     RachasComposeTheme {
-        CardList()
+        
     }
 }

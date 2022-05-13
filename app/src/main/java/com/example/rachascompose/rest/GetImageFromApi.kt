@@ -22,7 +22,7 @@ object GetImageFromApi {
             }
 
             override fun onResponse(call: Call<Pokemon>, response: Response<Pokemon>) {
-                lista = response.body()?.let { getImageList(it) }!!
+                lista = response.body()?.let { getImageList(it) } ?: listOf<String>()
             }
         })
 

@@ -1,5 +1,7 @@
 package com.example.rachascompose.ui.screen
 
+import android.content.Context
+import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
@@ -12,10 +14,17 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import coil.compose.rememberAsyncImagePainter
+import com.example.rachascompose.rest.GetImageFromApi
 
 object AddNewCounterItem {
 
-    fun buscarImagen():List<String>{
-        return listOf("https://bangbranding.com/blog/wp-content/uploads/2016/09/700x511_SliderInterior.jpg","https://biblioteca.acropolis.org/wp-content/uploads/2014/12/verde-1200x839.png")
+    fun buscarImagen(nombre:String, contexto:Context):List<String>{
+        var lista =  GetImageFromApi.getPokemon(nombre)
+
+        if(lista.isEmpty()){
+            Toast.makeText(contexto,"No se han encontrado resultados, asegurate de que el nombre esta bien escrito",Toast.LENGTH_SHORT)
+        }
+
+        return lista
     }
 }

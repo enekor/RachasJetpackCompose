@@ -45,7 +45,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@OptIn(ExperimentalComposeUiApi::class)
+@OptIn(ExperimentalComposeUiApi::class, ExperimentalMaterialApi::class)
 @Composable
 fun MainScreen(){
 
@@ -73,7 +73,42 @@ fun MainScreen(){
         },
         floatingActionButtonPosition = FabPosition.End
     ){
-        CardList(listaCounter)
+        //Creating the CardList who contains the counter items
+        Surface(
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            LazyColumn(){
+                items(listaCounter){
+                        contador ->
+                    run {
+                        val state = rememberDismissState(
+                            confirmStateChange = {
+                                if (it == DismissValue.DismissedToStart) {
+                                    deleteCounter(contador, contexto)
+                                    listaCounter = loadListFromDataBase(contexto)
+
+                                }
+                                true
+                            }
+                        )
+
+                        SwipeToDismiss(
+                            state = state,
+                            background = {
+                                swipeBackground(state)
+                            },
+                            dismissContent = {
+                                CardLayout.CounterCard(contador)
+                            },
+                            directions = setOf(DismissDirection.EndToStart)
+                        )
+                    }
+
+                }
+            }
+        }
+
+        //Dialog that allows the user to create a new counter item
         AnimatedVisibility(visible = openDialog) {
 
             var listaImagenes = listOf<String>()
@@ -86,6 +121,7 @@ fun MainScreen(){
                     .background(Color.Transparent),
                 onDismissRequest = { openDialog = false },
                 text = {
+                    //Text field whith a custom image
                     Column(
                         verticalArrangement = Arrangement.Center,
                         horizontalAlignment = Alignment.CenterHorizontally,
@@ -108,6 +144,7 @@ fun MainScreen(){
                                 .size(200.dp)
                                 .padding(horizontal = 12.dp)
                         )
+                        //image clicked ans showing the selecction menu
                         AnimatedVisibility(visible = clicked) {
                             Column(
                                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -143,6 +180,7 @@ fun MainScreen(){
                                 ) {
                                     Text(text = "Preview")
                                 }
+                                //the searched name is in the api, showing both images, shiny and normal one and waiting to one being chosen
                                 AnimatedVisibility(
                                     visible = previewing) {
                                     Row(
@@ -179,6 +217,7 @@ fun MainScreen(){
                     }
                 },
                 buttons = {
+                    //Button that allows user to save he image
                     Row (
                         horizontalArrangement = Arrangement.Center
                     ){
@@ -205,52 +244,21 @@ fun MainScreen(){
 
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
-fun CardList(contadores:List<Counter>){
-
-    val contexto = LocalContext.current
-
-    Surface(
-        modifier = Modifier.fillMaxWidth()
+private fun swipeBackground(state:DismissState){
+    var color = when (state.dismissDirection) {
+        DismissDirection.EndToStart -> Color.Red
+        null -> Color.Transparent
+        else -> Color.Transparent
+    }
+    Box(
+        modifier = Modifier.padding(12.dp).background(color = color).fillMaxSize()
     ) {
-        LazyColumn(){
-            items(contadores){
-                contador ->
-                val state = rememberDismissState(
-                    confirmStateChange = {
-                        if(it == DismissValue.DismissedToStart){
-                            deleteCounter(contador,contexto)
-                        }
-                        true
-                    }
-                )
-
-                SwipeToDismiss(
-                    state = state,
-                    background = {
-
-                        var color = when(state.dismissDirection){
-                            DismissDirection.EndToStart -> Color.Red
-                            null -> Color.Transparent
-                            else -> Color.Transparent
-                        }
-                        Box(
-                            modifier = Modifier.background(color = color).fillMaxSize().padding(12.dp)
-                        ){
-                            Icon(
-                                imageVector = Icons.Default.Delete,
-                                contentDescription = "Borrar",
-                                tint = Color.Gray,
-                                modifier = Modifier.align(Alignment.CenterEnd))
-                        }
-                    },
-                    dismissContent = {
-                        CardLayout.CounterCard(contador)
-                    },
-                    directions = setOf(DismissDirection.EndToStart)
-                )
-
-            }
-        }
+        Icon(
+            imageVector = Icons.Default.Delete,
+            contentDescription = "Borrar",
+            tint = Color.Gray,
+            modifier = Modifier.align(Alignment.CenterEnd)
+        )
     }
 }
 

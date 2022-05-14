@@ -74,28 +74,30 @@ object CardLayout {
                             horizontalArrangement = Arrangement.Center
                         ){
                             Image(
-                                painter = painterResource(id = R.drawable.add),
-                                contentDescription = "sumar",
-                                modifier = Modifier
-                                    .clickable {
-                                        contadorNum++
-                                        updateCounter(contadorNum, contador.id,contexto)
-                                    }
-                                    .size(100.dp)
-                                    .padding(end = 20.dp)
-                            )
-
-                            Image(
                                 painter = painterResource(id = R.drawable.remove),
                                 contentDescription = "restar",
                                 modifier = Modifier
                                     .clickable {
                                         contadorNum--
-                                        updateCounter(contadorNum, contador.id,contexto)
+                                        updateCounter(contadorNum, contador.id, contexto)
                                     }
                                     .size(100.dp)
                                     .padding(start = 20.dp)
                             )
+                            
+                            Image(
+                                painter = painterResource(id = R.drawable.add),
+                                contentDescription = "sumar",
+                                modifier = Modifier
+                                    .clickable {
+                                        contadorNum++
+                                        updateCounter(contadorNum, contador.id, contexto)
+                                    }
+                                    .size(100.dp)
+                                    .padding(end = 20.dp)
+                            )
+                            Text(text = contador.id.toString())
+                            
                         }
                     }
 

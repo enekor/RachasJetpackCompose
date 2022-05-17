@@ -5,20 +5,21 @@ import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.Query
 import com.example.rachascompose.model.Counter
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface CounterDao {
 
     @Insert
-    fun insertarContador(contador:Counter)
+    suspend fun insertarContador(contador:Counter)
 
     @Query("Select * from counter")
-    fun getAllCounters():MutableList<Counter>
+    fun getAllCounters(): Flow<List<Counter>>
 
     @Query("update counter set contador=:contador where id=:id")
     fun updateCounter(contador:Int,id:Int)
 
     @Delete
-    fun deleteCounter(counter:Counter)
+    suspend fun deleteCounter(counter:Counter)
 
 }

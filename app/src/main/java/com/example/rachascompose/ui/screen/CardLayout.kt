@@ -1,6 +1,7 @@
 package com.example.rachascompose.ui.screen
 
 import android.content.Context
+import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
@@ -11,6 +12,7 @@ import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.runtime.*
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -19,6 +21,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.MutableLiveData
 import androidx.room.Room
 import coil.compose.rememberAsyncImagePainter
 import com.example.rachascompose.R
@@ -28,15 +31,19 @@ import com.example.rachascompose.model.Counter
 import java.time.format.TextStyle
 
 object CardLayout {
+
+    var elementoABorrar:Counter? = null
+    var abrirMenuBorrado = MutableLiveData(false)
+
     @Composable
     fun CounterCard(contador: Counter){
 
         val contexto = LocalContext.current
+        elementoABorrar = contador
         
         var expanded by remember { mutableStateOf(false) }
         var contadorNum by remember { mutableStateOf( contador.contador) }
-        var confirmarBorrado by remember { mutableStateOf(false)}
-        var elementoABorrar by remember { mutableStateOf(null) }
+        val confirmarBorrado by abrirMenuBorrado.observeAsState()
         
         Card(
             Modifier
@@ -79,7 +86,9 @@ object CardLayout {
                                 .wrapContentWidth()
                                 .align(Alignment.Start)
                                 .clickable {
-                                    confirmarBorrado = true
+                                    abrirMenuBorrado.value = true
+                                    Log.d("borrado","cambiado el booleano de borrado ${abrirMenuBorrado.value}")
+                                    expanded = false
                                 }
                         ) {
                             Icon(
@@ -128,53 +137,50 @@ object CardLayout {
                 }
             }
         }
-
-        elementoABorrar?.let { confirmDelete(abierto = confirmarBorrado, it, LocalContext.current) }
+        AnimatedVisibility(visible = confirmarBorrado!!) {
+            Log.d("borrado","confirmacion de borrado ${confirmarBorrado}")
+            confirmDelete()
+        }
     }
 
     @Composable
-    private fun confirmDelete(abierto:Boolean,contador:Counter,contexto:Context){
+    private fun confirmDelete(){
         var borrar = false
-        var abrir by remember { mutableStateOf(abierto) }
+        val contexto = LocalContext.current
 
-        AnimatedVisibility(visible = abrir) {
-            AlertDialog(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .wrapContentHeight()
-                    .padding(horizontal = 20.dp),
-                onDismissRequest = { abrir = false },
-                text = { Text(text = "Desea borrar el contador")},
-                buttons = {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.Center
+        AlertDialog(
+            modifier = Modifier
+                .fillMaxWidth()
+                .wrapContentHeight()
+                .padding(horizontal = 20.dp),
+            onDismissRequest = { abrirMenuBorrado.value = false },
+            text = { Text(text = "Desea borrar el contador")},
+            buttons = {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Button(
+                        onClick = {
+                            borrar = false
+                            abrirMenuBorrado.value = false
+                                  },
+                        modifier = Modifier.padding(end = 12.dp)
                     ) {
-                        Button(
-                            onClick = {
-                                borrar = false
-                                abrir = false
-                                      },
-                            modifier = Modifier.padding(end = 12.dp)
-                        ) {
-                            Text(text = "Cancelar")
-                        }
-                        Button(
-                            onClick = {
-                                borrar = true
-                                abrir = false
-                                      },
-                            modifier = Modifier.padding(start = 12.dp)
-                        ) {
-                            Text(text = "Borrar")
-                        }
+                        Text(text = "Cancelar")
+                    }
+                    Button(
+                        onClick = {
+                            deleteCounter(elementoABorrar!!, contexto)
+                            abrirMenuBorrado.value = false
+                                  },
+                        modifier = Modifier.padding(start = 12.dp)
+                    ) {
+                        Text(text = "Borrar")
                     }
                 }
-            )
-        }
-        if(borrar){
-            deleteCounter(contador,contexto)
-        }
+            }
+        )
     }
 
     private fun updateCounter(contador:Int, id:Int, contexto: Context){

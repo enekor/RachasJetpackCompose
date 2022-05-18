@@ -17,7 +17,7 @@ interface CounterDao {
     fun getAllCounters(): Flow<List<Counter>>
 
     @Query("update counter set contador=:contador where id=:id")
-    fun updateCounter(contador:Int,id:Int)
+    suspend fun updateCounter(contador:Int,id:Int)
 
     @Delete
     suspend fun deleteCounter(counter:Counter)

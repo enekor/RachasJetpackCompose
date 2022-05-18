@@ -70,4 +70,5 @@ dependencies {
     kapt "androidx.room:room-compiler:2.3.0"
     implementation 'com.beust:klaxon:5.5'
     implementation "androidx.lifecycle:lifecycle-runtime-ktx:2.4.1"
+    implementation "androidx.compose.runtime:runtime-livedata:$compose_version"
 }

@@ -2,6 +2,8 @@ package com.example.rachascompose.ui.screen
 
 import android.content.Context
 import android.os.Bundle
+import android.os.Handler
+import android.text.TextUtils.isEmpty
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -21,18 +23,24 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.toLowerCase
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.lifecycleScope
 import androidx.room.Room
+import coil.compose.AsyncImage
 import coil.compose.rememberAsyncImagePainter
 import com.example.rachascompose.baseDeDatos.AccesoBaseDeDatos
 import com.example.rachascompose.baseDeDatos.BaseDeDatos
 import com.example.rachascompose.model.Counter
+import com.example.rachascompose.rest.GetImageFromApi
 import com.example.rachascompose.ui.theme.RachasComposeTheme
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
+import java.util.*
 
 class MainActivity : ComponentActivity() {
 
@@ -55,6 +63,7 @@ class MainActivity : ComponentActivity() {
         LaunchedEffect(Unit) { scrollState.animateScrollTo(10000) }
         val buscarImagenDefecto = "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7e/Vector_search_icon.svg/1200px-Vector_search_icon.svg.png"
         val contexto = LocalContext.current
+        var imagenes = flowOf(listOf<String>())
 
         var openDialog by remember { mutableStateOf(false) }
         var nombre by remember { mutableStateOf("") }
@@ -63,6 +72,13 @@ class MainActivity : ComponentActivity() {
         var buscarNombre by remember { mutableStateOf("") }
         var previewing by remember { mutableStateOf(false) }
         val listaCounter by remember { loadListFromDataBase(contexto) }.collectAsState(initial = emptyList())
+        val listaImagenes by remember { imagenes }.collectAsState(initial = emptyList())
+        var toastText by remember { mutableStateOf("")}
+        var toastTextColor = when(toastText){
+            "Gotcha!" -> Color.Green
+            "Buscando..." -> Color.Blue
+            else -> Color.Red
+        }
 
         Scaffold(
             Modifier.fillMaxSize(),
@@ -85,35 +101,12 @@ class MainActivity : ComponentActivity() {
                     items(listaCounter){
                             contador ->
                         CardLayout.CounterCard(contador = contador)
-                        /*run {
-                            val state = rememberDismissState(
-                                confirmStateChange = {
-                                    if (it == DismissValue.DismissedToStart) {
-                                        deleteCounter(contador, contexto)
-                                    }
-                                    true
-                                }
-                            )
-
-                            SwipeToDismiss(
-                                state = state,
-                                background = {
-                                    swipeBackground(state)
-                                },
-                                dismissContent = {
-                                    CardLayout.CounterCard(contador)
-                                },
-                                directions = setOf(DismissDirection.EndToStart)
-                            )
-                        }*/
                     }
                 }
             }
 
             //Dialog that allows the user to create a new counter item
             AnimatedVisibility(visible = openDialog) {
-
-                var listaImagenes = listOf<String>()
 
                 AlertDialog(
                     properties = DialogProperties(usePlatformDefaultWidth = false),
@@ -127,7 +120,9 @@ class MainActivity : ComponentActivity() {
                         Column(
                             verticalArrangement = Arrangement.Center,
                             horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier.wrapContentHeight().verticalScroll(scrollState)
+                            modifier = Modifier
+                                .wrapContentHeight()
+                                .verticalScroll(scrollState)
                         ) {
                             OutlinedTextField(
                                 value = nombre,
@@ -163,22 +158,19 @@ class MainActivity : ComponentActivity() {
                                         label = { Text(text = "Nombre del pokemon: ") },
                                         modifier = Modifier.fillMaxWidth()
                                     )
+                                    Text(
+                                        text = toastText,
+                                        color = toastTextColor
+                                    )
                                     Button(
                                         onClick = {
-                                            if(buscarNombre == ""){
-                                                toaster("Introduzca algo en el cuadro de texto antes de buscar",contexto)
-                                            }else{
-                                                Log.i("api","Buscando")
-                                                toaster("Buscando...",contexto)
-                                                listaImagenes = AddNewCounterItem.buscarImagen(buscarNombre,contexto)
-
-                                                if(!listaImagenes.isEmpty()) {
-                                                    previewing = !previewing
-                                                    Log.i("api", "avemus resultado")
-                                                    toaster("Listo!", contexto)
-                                                }else{
-                                                    Log.i("api","No se encontro resultado")
-                                                    toaster("No se han encontrado resultados", contexto)
+                                            if(buscarNombre != ""){
+                                                imagenes = flowOf(GetImageFromApi.getPokemon(buscarNombre.lowercase()))
+                                                toastText = "Buscando..."
+                                                previewing = !previewing
+                                                toastText = when{
+                                                    !listaImagenes.isEmpty() -> "Gotcha!"
+                                                    else -> "No se han encontrado resultados"
                                                 }
                                             }
                                         },
@@ -192,17 +184,30 @@ class MainActivity : ComponentActivity() {
                                         Row(
                                             verticalAlignment = Alignment.CenterVertically,
                                             horizontalArrangement = Arrangement.Center,
-                                            modifier = Modifier.wrapContentHeight().fillMaxWidth(),
+                                            modifier = Modifier
+                                                .wrapContentHeight()
+                                                .fillMaxWidth(),
                                         ) {
+
+                                            var imagen1 = when{
+                                                listaImagenes.isEmpty() -> "http://cdn.onlinewebfonts.com/svg/img_405474.png"
+                                                else -> listaImagenes[0]
+                                            }
+                                            var imagen2 = when{
+                                                listaImagenes.isEmpty() -> "http://cdn.onlinewebfonts.com/svg/img_405474.png"
+                                                else -> listaImagenes[1]
+                                            }
                                             Image(
                                                 modifier = Modifier
                                                     .size(120.dp)
                                                     .padding(horizontal = 5.dp)
                                                     .clickable {
-                                                        imagen = listaImagenes[0]
+                                                        imagen = imagen1
                                                         previewing = false
                                                     },
-                                                painter = rememberAsyncImagePainter(model = listaImagenes[0]),
+
+
+                                                painter = rememberAsyncImagePainter(model = imagen1),
                                                 contentDescription = "Forma original")
 
                                             Image(
@@ -210,10 +215,10 @@ class MainActivity : ComponentActivity() {
                                                     .size(120.dp)
                                                     .padding(horizontal = 5.dp)
                                                     .clickable {
-                                                        imagen = listaImagenes[1]
+                                                        imagen = imagen2
                                                         previewing = false
                                                     },
-                                                painter = rememberAsyncImagePainter(model = listaImagenes[1]),
+                                                painter = rememberAsyncImagePainter(model = imagen2),
                                                 contentDescription = "Forma shiny"
                                             )
                                         }
@@ -247,29 +252,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    /*@OptIn(ExperimentalMaterialApi::class)
-    @Composable
-    private fun swipeBackground(state:DismissState){
-        var color = when (state.dismissDirection) {
-            DismissDirection.EndToStart -> Color.Red
-            null -> Color.Transparent
-            else -> Color.Transparent
-        }
-        Box(
-            modifier = Modifier
-                .padding(12.dp)
-                .background(color = color)
-                .fillMaxSize()
-        ) {
-            Icon(
-                imageVector = Icons.Default.Delete,
-                contentDescription = "Borrar",
-                tint = Color.Gray,
-                modifier = Modifier.align(Alignment.CenterEnd)
-            )
-        }
-    }*/
-
     private fun toaster(texto:String, contexto:Context){
         Toast.makeText(contexto,texto,Toast.LENGTH_SHORT)
     }
@@ -285,11 +267,6 @@ class MainActivity : ComponentActivity() {
 
         listado = AccesoBaseDeDatos.loadListFromDataBase(db)
         return listado
-    }
-
-    private fun deleteCounter(contador:Counter, contexto: Context){
-        val db = BaseDeDatos.getDatabase(contexto)
-        AccesoBaseDeDatos.deleteCounter(contador,db)
     }
 
     @Preview(showBackground = true)

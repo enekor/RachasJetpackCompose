@@ -23,7 +23,7 @@ object AccesoBaseDeDatos {
         return listado
     }
 
-    fun deleteCounter(contador: Counter, db: BaseDeDatos) {
+    fun deleteCounter(contador: Int, db: BaseDeDatos) {
         runBlocking {
             db.itemDao().deleteCounter(contador)
         }

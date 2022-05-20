@@ -14,11 +14,12 @@ object GetImageFromApi {
     var lista = listOf<String>()
 
     fun getPokemon(nombre:String):List<String>{
+        Log.d("apilistado","dentro")
         val call = api.getPokemon(nombre)
 
         call.enqueue(object : Callback<Pokemon> {
             override fun onFailure(call: Call<Pokemon>, t: Throwable) {
-                Log.i("info","fallido el acceso a la api")
+                Log.d("apilistado","fallo en la api")
             }
 
             override fun onResponse(call: Call<Pokemon>, response: Response<Pokemon>) {

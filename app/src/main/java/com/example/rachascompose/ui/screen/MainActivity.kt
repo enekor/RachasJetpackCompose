@@ -38,11 +38,14 @@ import com.example.rachascompose.rest.GetImageFromApi
 import com.example.rachascompose.ui.theme.RachasComposeTheme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.count
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import java.util.*
 
 class MainActivity : ComponentActivity() {
+
+    var imagenesLista:List<String> = listOf()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -63,7 +66,7 @@ class MainActivity : ComponentActivity() {
         LaunchedEffect(Unit) { scrollState.animateScrollTo(10000) }
         val buscarImagenDefecto = "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7e/Vector_search_icon.svg/1200px-Vector_search_icon.svg.png"
         val contexto = LocalContext.current
-        var imagenes = flowOf(listOf<String>())
+
 
         var openDialog by remember { mutableStateOf(false) }
         var nombre by remember { mutableStateOf("") }
@@ -72,7 +75,6 @@ class MainActivity : ComponentActivity() {
         var buscarNombre by remember { mutableStateOf("") }
         var previewing by remember { mutableStateOf(false) }
         val listaCounter by remember { loadListFromDataBase(contexto) }.collectAsState(initial = emptyList())
-        val listaImagenes by remember { imagenes }.collectAsState(initial = emptyList())
         var toastText by remember { mutableStateOf("")}
         var toastTextColor = when(toastText){
             "Gotcha!" -> Color.Green
@@ -99,8 +101,8 @@ class MainActivity : ComponentActivity() {
             ) {
                 LazyColumn(){
                     items(listaCounter){
-                            contador ->
-                        CardLayout.CounterCard(contador = contador)
+                        contador ->
+                        CardLayout().CounterCard(contador = contador)
                     }
                 }
             }
@@ -143,6 +145,10 @@ class MainActivity : ComponentActivity() {
                                     .padding(horizontal = 12.dp)
                                     .align(Alignment.CenterHorizontally)
                             )
+                            Text(
+                                text = toastText,
+                                color = toastTextColor
+                            )
                             //image clicked ans showing the selecction menu
                             AnimatedVisibility(visible = clicked) {
                                 Column(
@@ -150,7 +156,6 @@ class MainActivity : ComponentActivity() {
                                     verticalArrangement = Arrangement.Center,
                                     modifier = Modifier.wrapContentHeight()
                                 ) {
-                                    Text(text = "Buscar")
                                     OutlinedTextField(
                                         value = buscarNombre,
                                         onValueChange = {buscarNombre = it},
@@ -158,19 +163,28 @@ class MainActivity : ComponentActivity() {
                                         label = { Text(text = "Nombre del pokemon: ") },
                                         modifier = Modifier.fillMaxWidth()
                                     )
-                                    Text(
-                                        text = toastText,
-                                        color = toastTextColor
-                                    )
                                     Button(
                                         onClick = {
-                                            if(buscarNombre != ""){
-                                                imagenes = flowOf(GetImageFromApi.getPokemon(buscarNombre.lowercase()))
-                                                toastText = "Buscando..."
-                                                previewing = !previewing
-                                                toastText = when{
-                                                    !listaImagenes.isEmpty() -> "Gotcha!"
-                                                    else -> "No se han encontrado resultados"
+                                            if(previewing){
+                                                previewing = false
+                                            }else{
+                                                if(buscarNombre != ""){
+                                                    GetImageFromApi.getPokemon(buscarNombre.lowercase())
+                                                    toastText = "Buscando..."
+
+                                                    val handler = Handler()
+                                                    handler.postDelayed({
+                                                        val imagenes = GetImageFromApi.lista
+                                                        if(imagenes.isEmpty()){
+                                                            toastText = "No se encontraron resutados para el pokemon ${buscarNombre}"
+                                                        }else{
+                                                            imagenesLista = imagenes
+                                                            toastText = "Gotcha!"
+                                                            previewing = true
+                                                        }
+                                                    },1000)
+                                                }else{
+                                                    toastText = "No se puede buscar un nombre vacio"
                                                 }
                                             }
                                         },
@@ -189,25 +203,17 @@ class MainActivity : ComponentActivity() {
                                                 .fillMaxWidth(),
                                         ) {
 
-                                            var imagen1 = when{
-                                                listaImagenes.isEmpty() -> "http://cdn.onlinewebfonts.com/svg/img_405474.png"
-                                                else -> listaImagenes[0]
-                                            }
-                                            var imagen2 = when{
-                                                listaImagenes.isEmpty() -> "http://cdn.onlinewebfonts.com/svg/img_405474.png"
-                                                else -> listaImagenes[1]
-                                            }
                                             Image(
                                                 modifier = Modifier
                                                     .size(120.dp)
                                                     .padding(horizontal = 5.dp)
                                                     .clickable {
-                                                        imagen = imagen1
                                                         previewing = false
+                                                        imagen = imagenesLista[0]
                                                     },
 
 
-                                                painter = rememberAsyncImagePainter(model = imagen1),
+                                                painter = rememberAsyncImagePainter(model = imagenesLista[0]),
                                                 contentDescription = "Forma original")
 
                                             Image(
@@ -215,10 +221,10 @@ class MainActivity : ComponentActivity() {
                                                     .size(120.dp)
                                                     .padding(horizontal = 5.dp)
                                                     .clickable {
-                                                        imagen = imagen2
                                                         previewing = false
+                                                        imagen = imagenesLista[1]
                                                     },
-                                                painter = rememberAsyncImagePainter(model = imagen2),
+                                                painter = rememberAsyncImagePainter(model = imagenesLista[1]),
                                                 contentDescription = "Forma shiny"
                                             )
                                         }
@@ -238,8 +244,9 @@ class MainActivity : ComponentActivity() {
                                     if(imagen != buscarImagenDefecto && nombre != ""){
                                         createNewCounter(Counter(nombre,imagen,0),contexto)
                                         openDialog = false
+                                        imagenesLista = listOf<String>()
                                     }else{
-                                        toaster("No se pueden dejar campos en blanco",contexto)
+                                        toastText = "No se puede guardar un contador sin nombre o imagen"
                                     }
                                 }
                             ) {

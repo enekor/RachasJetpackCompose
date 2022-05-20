@@ -19,7 +19,7 @@ interface CounterDao {
     @Query("update counter set contador=:contador where id=:id")
     suspend fun updateCounter(contador:Int,id:Int)
 
-    @Delete
-    suspend fun deleteCounter(counter:Counter)
+    @Query("Delete from counter where id=:id")
+    suspend fun deleteCounter(id:Int)
 
 }

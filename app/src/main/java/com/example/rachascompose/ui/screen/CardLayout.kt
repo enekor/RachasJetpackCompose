@@ -3,6 +3,7 @@ package com.example.rachascompose.ui.screen
 import android.content.Context
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -28,23 +29,31 @@ import com.example.rachascompose.model.Counter
 
 class CardLayout {
 
-    var abrirMenuBorrado = MutableLiveData(false)
-    var expandedCard = MutableLiveData(false)
+    var recienBorrado = MutableLiveData(false)
 
+    private var abrirMenuBorrado = MutableLiveData(false)
     @Composable
     fun CounterCard(contador: Counter){
 
         val contexto = LocalContext.current
-        
-        val expanded by expandedCard.observeAsState()
+
+        val recienBorradoState by recienBorrado.observeAsState()
+        var expanded by remember { mutableStateOf(false)}
         var contadorNum by remember { mutableStateOf( contador.contador) }
         val confirmarBorrado by abrirMenuBorrado.observeAsState()
+
+        if(recienBorradoState == true){
+            recienBorrado.value = false
+            expanded = false
+        }
         
         Card(
             Modifier
                 .fillMaxWidth()
                 .padding(12.dp)
-                .clickable { expandedCard.value = !expandedCard.value!! },
+                .clickable {
+                    expanded = !expanded
+                },
             elevation = 10.dp,
             shape = RoundedCornerShape(20.dp)
 
@@ -64,11 +73,13 @@ class CardLayout {
                     )
                     Text(
                         text = contador.nombre,
-                        style = MaterialTheme.typography.h3)
+                        style = MaterialTheme.typography.h3,
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Center)
                 }
-                AnimatedVisibility(visible = expanded!!) {
+                AnimatedVisibility(visible = expanded) {
                     Column(
-                        Modifier.fillMaxWidth()
+                        Modifier.fillMaxWidth().background(Color(159,146,156))
                     ) {
                         Text(
                             text = contadorNum.toString(),
@@ -87,7 +98,7 @@ class CardLayout {
                             Icon(
                                 imageVector = Icons.Default.Delete,
                                 contentDescription = "Delete",
-                                tint = Color.LightGray,
+                                tint = Color.Red,
                                 modifier = Modifier
                                     .size(25.dp)
                                     .align(Alignment.CenterVertically)
@@ -95,7 +106,8 @@ class CardLayout {
                             Text(
                                 text = "Borrar",
                                 fontSize = 25.sp,
-                                modifier = Modifier.align(Alignment.CenterVertically)
+                                modifier = Modifier.align(Alignment.CenterVertically),
+                                color = Color.Red
                             )
                         }
                         Row (
@@ -127,7 +139,7 @@ class CardLayout {
                             )
 
                             AnimatedVisibility(visible = confirmarBorrado!!) {
-                                confirmDelete(contador)
+                               confirmDelete(contador)
                             }
                         }
                     }
@@ -137,7 +149,7 @@ class CardLayout {
     }
 
     @Composable
-    private fun confirmDelete(contador:Counter){
+    private fun confirmDelete(contador:Counter):Boolean{
         var borrar = false
         val contexto = LocalContext.current
 
@@ -164,6 +176,7 @@ class CardLayout {
                     }
                     Button(
                         onClick = {
+                            borrar = true
                             deleteCounter(contador.id, contexto)
                             abrirMenuBorrado.value = false
                         },
@@ -174,6 +187,7 @@ class CardLayout {
                 }
             }
         )
+        return borrar
     }
 
     private fun updateCounter(contador:Int, id:Int, contexto: Context){
@@ -184,6 +198,6 @@ class CardLayout {
     private fun deleteCounter(counter: Int, contexto:Context){
         val db = BaseDeDatos.getDatabase(contexto)
         AccesoBaseDeDatos.deleteCounter(counter,db)
-        //expandedCard.value = false
+        recienBorrado.value = true
     }
 }
